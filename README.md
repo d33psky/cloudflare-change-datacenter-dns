@@ -1,13 +1,15 @@
-cloudflare-ddns
-===============
+cloudflare-change-datacenter-dns
+================================
 
 Introduction
 ------------
 
-A script for dynamically updating a CloudFlare DNS record.  I use CloudFlare
-to host DNS for a domain and I wanted to point an A record in that domain to
-a host who's IP address changes occasionally.  CloudFlare has an API to do this,
-so this happened.
+A script to update a selection of DNS zone records at CloudFlare. Intended to
+be used when failing over to another datacenter where multiple services are
+hosted on 1 IP address and no other changes to these records are wanted and all
+other records are to remain untouched.
+
+This work is based on [thatjpk/cloudflare-ddns](https://github.com/thatjpk/cloudflare-ddns). Thanks !
 
 Dependencies
 ------------
@@ -15,61 +17,50 @@ Dependencies
 You'll need a python interpreter and the following libraries:
 
  - [PyYAML](https://bitbucket.org/xi/pyyaml) (`pip install pyyaml`)
- - [Requests](http://docs.python-requests.org/en/latest/) (`pip install
-   requests`)
+ - [Requests](http://docs.python-requests.org/en/latest/) (`pip install requests`)
 
 Usage
 -----
 
-First, a few assumptions:
+First copy `config.yaml.template` file to `config.yaml` and fill in your
+CloudFlare email address and API key. Then run the script as follows :
 
-  - You have a CloudFlare account.
-  - You're using CloudFlare to host DNS for a domain you own.
-  - You have an A record in CloudFlare you intend to dynamically update.
+    cloudflare-change-datacenter-dns.py [-h] [--debug] [--config CONFIG] [--zone ZONE] [--records RECORDS] [--newip NEWIP]
 
-To use this utility, create a copy of the `config.yaml.template` file (and
-remove .template from the filename).  Create one template per each record / 
-domain pair you intend to update.  For example, I might have two configuration
-files: `site_naked.yaml` that updates the A record for the naked (no www
-prefix) domain site.not, and a second config, `site_www.yaml` that updates the
-A record for www.site.not.
+    optional arguments:
+      -h, --help         show this help message and exit
+      --debug            Enable debug level logging (default: info level)
+      --config CONFIG    Yaml config file (default: config.yaml)
+      --zone ZONE        DNS zone (example: somezone.org)
+      --records RECORDS  DNS zone records to change (example: www03,somezone.org,acceptance)
+      --newip NEWIP      New IP address (example: 127.0.0.1)
 
-To do a one-off update of your DNS record, simply run `python
-cloudflare_ddns.py config_file_name.yaml` from your terminal.
-The script will determine your public IP address and automatically update the
-CloudFlare DNS record along with it.
+Here is an example run where video was already set to the new intended IP
+address but dev not yet. The script skips all other records it finds in the zone :
 
-If the program encounters an issue while attempting to update CloudFlare's 
-records, it will print the failure response CloudFlare returns. Check your 
-configuration file for accurate information and try again.
+    ./cloudflare-change-datacenter-dns.py --zone somedomain.org --records video,dev --newip 127.0.0.1
 
-
-Because dynamic IPs can change regularly, it's recommended that you run this
-utility periodically in the background to keep the CloudFlare record 
-up-to-date.
-
-Just add a line to your [crontab](http://en.wikipedia.org/wiki/Cron) and let
-cron run it for you at a regular interval.
-
-    # Every 15 minutes, check the current public IP, and update the A record on CloudFlare.
-    */15 * * * * /path/to/code/cloudflare-ddns.py /path/to/code/config.yaml >> /var/log/cloudflare_ddns.log
-
-This example will update the record every 15 minutes.  You'll want to be sure
-that you insert the correct paths to reflect were the codebase is located.
-The redirection (`>>`) to append to a log file is optional, but handy for
-debugging if you notice the DNS record is not staying up-to-date.  The script
-tries to print something useful to stdout any time it runs. If you find the
-"unchanged" messages too chatty, set quiet to true in the config and stdout
-will only get messages when the IP actually changed, or when there's an error.
-
-If you want to learn more about the CloudFlare API, you can read on
-[here](http://www.cloudflare.com/docs/client-api.html).
+    2016-03-09 13:45:50,336 INFO Work on domain somedomain.org
+    2016-03-09 13:45:50,336 INFO Work on records ['video', 'dev']
+    2016-03-09 13:45:50,337 INFO New IP 127.0.0.1
+    2016-03-09 13:45:50,345 INFO Starting new HTTPS connection (1): www.cloudflare.com
+    2016-03-09 13:45:51,020 INFO Skip somedomain.org
+    2016-03-09 13:45:51,020 INFO Skip acceptance
+    2016-03-09 13:45:51,020 INFO Skip api
+    2016-03-09 13:45:51,020 INFO Skip developers
+    2016-03-09 13:45:51,020 INFO Change dev.somedomain.org to 127.0.0.1
+    2016-03-09 13:45:51,021 INFO Starting new HTTPS connection (1): www.cloudflare.com
+    2016-03-09 13:45:51,276 INFO Updated dev.somedomain.org to 127.0.0.1
+    2016-03-09 13:45:51,278 INFO Skip images
+    2016-03-09 13:45:51,278 INFO Skip origin
+    2016-03-09 13:45:51,278 INFO Skip static1
+    2016-03-09 13:45:51,278 INFO Keep video.somedomain.org unchanged with 127.0.0.1
+    2016-03-09 13:45:51,278 INFO Skip www
 
 Credits and Thanks
 ------------------
 
- - [CloudFlare](https://www.cloudflare.com/) for having an API and otherwise
-   generally being cool.
- - [icanhazip.com](http://icanhazip.com/) for making grabbing your public IP
-    from a script super easy.
+ - [CloudFlare](https://www.cloudflare.com/) for hosting DNS and having an [API](http://www.cloudflare.com/docs/client-api.html).
+ - [thatjpk/cloudflare-ddns](https://github.com/thatjpk/cloudflare-ddns) for
+   writing cloudflare-ddns
 

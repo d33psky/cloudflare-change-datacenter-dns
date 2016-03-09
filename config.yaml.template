@@ -1,5 +1,5 @@
 %YAML 1.2
-# CloudFlare DDNS updater script config.
+# CloudFlare change datacenter DNS updater script config.
 ---
 
 # CloudFlare API key
@@ -9,23 +9,3 @@ cf_key: 'YOUR KEY HARE'
 # Email address for your CloudFlare account.
 cf_email: 'YOUR EMAIL HERE'
 
-# Domain you're using CloudFlare to manage.
-# If the host name you're updating is "ddns.domain.com", make this "domain.com".
-cf_domain: 'YOUR DOMAIN HERE'
-
-# The subdomain you're using for your DDNS A record.
-# If the host name you're updating is "ddns.domain.com", make this "ddns".
-cf_subdomain: 'YOUR SUBDOMAIN HERE'
-
-# CloudFlare service mode. This enables/disables CF's traffic acceleration.
-# Enabled (orange cloud) is 1. Disabled (grey cloud) is 0.
-cf_service_mode: 1
-
-# If set to 'true', prints a message only when the record changes or when
-# there's an error.  If set to 'false', prints a message every time even if
-# the record didn't change.
-quiet: 'false'
-
-# If set to true then we call the ec2metadata service for the instance
-# public ip address rather than an external service.
-aws_use_ec2metadata: false

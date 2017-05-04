@@ -17,9 +17,8 @@ import sys
 import logging
 from subprocess import Popen, PIPE
 
-CLOUDFLARE_URL = 'https://www.cloudflare.com/api_json.html'
+CLOUDFLARE_URL = 'https://api.cloudflare.com/client/v4'
 RECORD_TYPE = 'A'
-
 
 def main(configfile, zone, records, newip):
 
@@ -41,76 +40,86 @@ def main(configfile, zone, records, newip):
     cf_email = config.get('cf_email')
     logging.debug('cf_email=%s', cf_email)
 
-    cf_params = {
-        'a': 'rec_load_all',
-        'tkn': cf_key,
-        'email': cf_email,
-        'z': zone,
-        'o': 0
+    # [1] get zone identifier :
+    # https://api.cloudflare.com/#zone-list-zones
+    cf_headers = {
+        'X-Auth-Email': cf_email,
+        'X-Auth-Key': cf_key,
+        'Content-Type': 'application/json',
         }
-    seenAllPages = False
-    while not seenAllPages:
-        cf_response = requests.get(CLOUDFLARE_URL, params=cf_params)
-        if cf_response.status_code < 200 or cf_response.status_code > 299:
-            msg = "CloudFlare returned an unexpected status code: {}".format(cf_response.status_code)
-            logging.error(msg)
-            exit(1)
-
-        response = json.loads(cf_response.text)
-        #logging.debug('response=[%s]', response)
-        if response["result"] == "error":
-            logging.error("error: %s", response["msg"])
-            exit(1)
-
-        for record in response["response"]["recs"]["objs"]:
-            #logging.debug('record=%s', record)
-            shortname = record["name"].replace( str('.'+zone) , '')
-            #logging.debug('recordname [%s] zone [%s] shortname [%s]', record["name"], zone, shortname)
-
-            if (record["type"] == RECORD_TYPE) :
-                #logging.debug('Consider %s', record["name"])
-                if ( shortname in records ):
-                    if record["content"] == newip:
-                        logging.info('Keep %s unchanged with %s', record["name"], newip)
-                    else:
-                        logging.info('Change %s to %s', record["name"], newip)
-                        repoint(cf_key, cf_email, record, newip)
-                else:
-                    logging.info('Skip %s', shortname)
-
-        if response["response"]["recs"]["has_more"]:
-            logging.debug('We have not seen all pages yet, set a new start point')
-            cf_params["o"] = response["response"]["recs"]["count"] 
-        else:
-            seenAllPages = True
-
-# https://api.cloudflare.com/#dns-records-for-a-zone-dns-record-details
-def repoint(cf_key, cf_email, record, newip):
-    #logging.debug('record = %s', record)
     cf_params = {
-        'a': 'rec_edit',
-        'tkn': cf_key,
-        'email': cf_email,
-        'id': record["rec_id"],
-        'z': record["zone_name"],
-        'type': record["type"],
-        'ttl': record["ttl"],
-        'name': record["name"],
+        'name': zone,
+        }
+    cf_response = requests.get(CLOUDFLARE_URL + '/zones', headers=cf_headers, params=cf_params)
+    if cf_response.status_code < 200 or cf_response.status_code > 299:
+        msg = "CloudFlare returned an unexpected status code: {}".format(cf_response.status_code)
+        logging.error(msg)
+        exit(1)
+    response = json.loads(cf_response.text)
+    #logging.debug('response=[%s]', response)
+    #logging.debug('response=[%s]', response["result"][0]["id"])
+    zone_id = response["result"][0]["id"]
+    logging.debug('response[result][0][id]=[%s]', zone_id)
+#    exit(0)
+
+    # [2] then list records :
+    # https://api.cloudflare.com/#dns-records-for-a-zone-list-dns-records
+    cf_params = {
+        'type': RECORD_TYPE,
+        'page': 1,
+        'per_page': 100,
+        }
+    cf_response = requests.get(CLOUDFLARE_URL + "/zones/" + zone_id + "/dns_records", headers=cf_headers, params=cf_params)
+    if cf_response.status_code < 200 or cf_response.status_code > 299:
+        msg = "CloudFlare returned an unexpected status code: {}".format(cf_response.status_code)
+        logging.error(msg)
+        exit(1)
+
+    response = json.loads(cf_response.text)
+    #logging.debug('response=[%s]', response)
+    if response["result"] == "error":
+        logging.error("error: %s", response["msg"])
+        exit(1)
+
+    for record in response["result"]:
+        #logging.debug('record=%s', record)
+        record_id = record['id']
+        shortname = record["name"].replace( str('.'+zone) , '')
+        #logging.debug('recordname [%s] zone [%s] shortname [%s]', record["name"], zone, shortname)
+
+        if (record["type"] == RECORD_TYPE) :
+            #logging.debug('Consider %s', record["name"])
+            if ( shortname in records ):
+                if record["content"] == newip:
+                    logging.info('Keep %s unchanged with %s', record["name"], newip)
+                else:
+                    logging.info('Change %s to %s', record["name"], newip)
+                    repoint(cf_headers, zone_id, record_id, record["name"], newip)
+            else:
+                logging.info('Skip %s', shortname)
+
+# [3] and update ones that need to :
+# https://api.cloudflare.com/#dns-records-for-a-zone-update-dns-record
+def repoint(cf_headers, zone_id, record_id, name, newip):
+    cf_json = {
+        'type': RECORD_TYPE,
+        'name': name,
         'content': newip,
         }
-    cf_response = requests.get(CLOUDFLARE_URL, params=cf_params)
+    cf_response = requests.put(CLOUDFLARE_URL + "/zones/" + zone_id + "/dns_records/" + record_id, headers=cf_headers, json=cf_json)
+    logging.debug('response=[%s]', cf_response)
     if cf_response.status_code < 200 or cf_response.status_code > 299:
-        msg = "CloudFlare returned an unexpected status code: {}".format(response.status_code)
+        msg = "CloudFlare returned an unexpected status code: {}".format(cf_response.status_code)
         logging.error(msg)
         raise Exception(msg)
     response = json.loads(cf_response.text)
 
-    if response["result"] == "success":
-        logging.info('Updated %s to %s', record["name"], newip)
-    else:
-        msg = "Updating record failed with the result '{}'".format(response["result"])
+    if response["errors"]:
+        msg = "Updating record failed with the result '{}'".format(response)
         logging.error(msg)
         raise Exception(msg)
+    else:
+        logging.info('Updated %s to %s', name, newip)
 
     return
 

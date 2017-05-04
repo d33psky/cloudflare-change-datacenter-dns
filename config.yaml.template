@@ -3,7 +3,7 @@
 ---
 
 # CloudFlare API key
-# You can find this under Account > My account after logging into CloudFlare.
+# You can find this under My Settings -> Account after logging into CloudFlare.
 cf_key: 'YOUR KEY HARE'
 
 # Email address for your CloudFlare account.

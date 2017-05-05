@@ -40,8 +40,7 @@ def main(configfile, zone, records, newip):
     cf_email = config.get('cf_email')
     logging.debug('cf_email=%s', cf_email)
 
-    # [1] get zone identifier :
-    # https://api.cloudflare.com/#zone-list-zones
+    # [1] get zone identifier. https://api.cloudflare.com/#zone-list-zones
     cf_headers = {
         'X-Auth-Email': cf_email,
         'X-Auth-Key': cf_key,
@@ -57,13 +56,10 @@ def main(configfile, zone, records, newip):
         exit(1)
     response = json.loads(cf_response.text)
     #logging.debug('response=[%s]', response)
-    #logging.debug('response=[%s]', response["result"][0]["id"])
     zone_id = response["result"][0]["id"]
     logging.debug('response[result][0][id]=[%s]', zone_id)
-#    exit(0)
 
-    # [2] then list records :
-    # https://api.cloudflare.com/#dns-records-for-a-zone-list-dns-records
+    # [2] list records. https://api.cloudflare.com/#dns-records-for-a-zone-list-dns-records
     cf_params = {
         'type': RECORD_TYPE,
         'page': 1,
@@ -74,19 +70,18 @@ def main(configfile, zone, records, newip):
         msg = "CloudFlare returned an unexpected status code: {}".format(cf_response.status_code)
         logging.error(msg)
         exit(1)
-
     response = json.loads(cf_response.text)
     #logging.debug('response=[%s]', response)
     if response["result"] == "error":
         logging.error("error: %s", response["msg"])
         exit(1)
 
+    # [3] update ones that need to.
     for record in response["result"]:
         #logging.debug('record=%s', record)
         record_id = record['id']
         shortname = record["name"].replace( str('.'+zone) , '')
         #logging.debug('recordname [%s] zone [%s] shortname [%s]', record["name"], zone, shortname)
-
         if (record["type"] == RECORD_TYPE) :
             #logging.debug('Consider %s', record["name"])
             if ( shortname in records ):
@@ -94,19 +89,22 @@ def main(configfile, zone, records, newip):
                     logging.info('Keep %s unchanged with %s', record["name"], newip)
                 else:
                     logging.info('Change %s to %s', record["name"], newip)
-                    repoint(cf_headers, zone_id, record_id, record["name"], newip)
+                    logging.debug('record %s', record)
+                    repoint(cf_headers, record, newip)
             else:
                 logging.info('Skip %s', shortname)
 
-# [3] and update ones that need to :
 # https://api.cloudflare.com/#dns-records-for-a-zone-update-dns-record
-def repoint(cf_headers, zone_id, record_id, name, newip):
+def repoint(cf_headers, record, newip):
     cf_json = {
-        'type': RECORD_TYPE,
-        'name': name,
+        'type': record["type"],
+        'name': record["name"],
         'content': newip,
+        'ttl': record["ttl"],
+        'proxied': record["proxied"],
         }
-    cf_response = requests.put(CLOUDFLARE_URL + "/zones/" + zone_id + "/dns_records/" + record_id, headers=cf_headers, json=cf_json)
+    cf_response = requests.put(CLOUDFLARE_URL + "/zones/" + record["zone_id"] + "/dns_records/" + record["id"], headers=cf_headers, json=cf_json)
+    logging.debug('cf_json=[%s]', cf_json)
     logging.debug('response=[%s]', cf_response)
     if cf_response.status_code < 200 or cf_response.status_code > 299:
         msg = "CloudFlare returned an unexpected status code: {}".format(cf_response.status_code)
@@ -119,7 +117,7 @@ def repoint(cf_headers, zone_id, record_id, name, newip):
         logging.error(msg)
         raise Exception(msg)
     else:
-        logging.info('Updated %s to %s', name, newip)
+        logging.info('Updated %s to %s', record["name"], newip)
 
     return
 

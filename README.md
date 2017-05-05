@@ -40,27 +40,28 @@ address but dev not yet. The script skips all other records it finds in the zone
 
     ./cloudflare-change-datacenter-dns.py --zone somedomain.org --records video,dev --newip 127.0.0.1
 
-    2016-03-09 13:45:50,336 INFO Work on domain somedomain.org
-    2016-03-09 13:45:50,336 INFO Work on records ['video', 'dev']
-    2016-03-09 13:45:50,337 INFO New IP 127.0.0.1
-    2016-03-09 13:45:50,345 INFO Starting new HTTPS connection (1): www.cloudflare.com
-    2016-03-09 13:45:51,020 INFO Skip somedomain.org
-    2016-03-09 13:45:51,020 INFO Skip acceptance
-    2016-03-09 13:45:51,020 INFO Skip api
-    2016-03-09 13:45:51,020 INFO Skip developers
-    2016-03-09 13:45:51,020 INFO Change dev.somedomain.org to 127.0.0.1
-    2016-03-09 13:45:51,021 INFO Starting new HTTPS connection (1): www.cloudflare.com
-    2016-03-09 13:45:51,276 INFO Updated dev.somedomain.org to 127.0.0.1
-    2016-03-09 13:45:51,278 INFO Skip images
-    2016-03-09 13:45:51,278 INFO Skip origin
-    2016-03-09 13:45:51,278 INFO Skip static1
-    2016-03-09 13:45:51,278 INFO Keep video.somedomain.org unchanged with 127.0.0.1
-    2016-03-09 13:45:51,278 INFO Skip www
+    2017-05-05 11:46:33,671 INFO Work on domain somedomain.org
+    2017-05-05 11:46:33,671 INFO Work on records ['video', 'dev']
+    2017-05-05 11:46:33,671 INFO New IP 127.0.0.1
+    2017-05-05 11:46:33,674 INFO Starting new HTTPS connection (1): api.cloudflare.com
+    2017-05-05 11:46:34,490 INFO Skip somedomain.org
+    2017-05-05 11:46:34,491 INFO Skip acceptance
+    2017-05-05 11:46:34,491 INFO Skip api
+    2017-05-05 11:46:34,491 INFO Skip developers
+    2017-05-05 11:46:34,491 INFO Change dev.somedomain.org to 127.0.0.1
+    2017-05-05 11:46:34,492 INFO Starting new HTTPS connection (1): api.cloudflare.com
+    2017-05-05 11:46:34,778 INFO Updated dev.somedomain.org to 127.0.0.1
+    2017-05-05 11:46:34,778 INFO Skip images
+    2017-05-05 11:46:34,778 INFO Skip origin
+    2017-05-05 11:46:34,778 INFO Skip static1
+    2017-05-05 11:46:34,778 INFO Skip storage
+    2017-05-05 11:46:34,778 INFO Keep video.somedomain.org unchanged with 127.0.0.1
+    2017-05-05 11:46:34,778 INFO Skip www
+
 
 Credits and Thanks
 ------------------
 
- - [CloudFlare](https://www.cloudflare.com/) for hosting DNS and having an [API](http://www.cloudflare.com/docs/client-api.html).
- - [thatjpk/cloudflare-ddns](https://github.com/thatjpk/cloudflare-ddns) for
-   writing cloudflare-ddns
+ - [CloudFlare](https://www.cloudflare.com/) for hosting DNS and having an [API](https://api.cloudflare.com/).
+ - [thatjpk/cloudflare-ddns](https://github.com/thatjpk/cloudflare-ddns) for writing cloudflare-ddns
 

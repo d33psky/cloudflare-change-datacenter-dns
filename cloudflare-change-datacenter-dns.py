@@ -92,7 +92,7 @@ def main(configfile, zone, records, newip):
                     logging.debug('record %s', record)
                     repoint(cf_headers, record, newip)
             else:
-                logging.info('Skip %s', shortname)
+                logging.info('Skip %s %s %s ttl=%s accellerated=%s', shortname, record["type"], record["content"], record["ttl"], record["proxied"])
 
 # https://api.cloudflare.com/#dns-records-for-a-zone-update-dns-record
 def repoint(cf_headers, record, newip):
